@@ -1,0 +1,191 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 255, 0, 0.2);
+    padding: 40px;
+    max-width: 600px;
+    width: 100%;
+    border: 2px solid #00cc00;
+}
+
+.logos {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #00cc00;
+}
+
+.logo {
+    max-width: 150px;
+    max-height: 80px;
+    object-fit: contain;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    color: #000000;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.header-line {
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #00cc00, #00ff00);
+    margin: 0 auto;
+    border-radius: 2px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    color: #000000;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.form-group input:disabled {
+    background-color: #f5f5f5;
+    color: #666666;
+    cursor: not-allowed;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #00cc00;
+    box-shadow: 0 0 0 3px rgba(0, 204, 0, 0.1);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #666666;
+    font-size: 12px;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #00cc00 0%, #00ff00 100%);
+    color: #000000;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.btn-submit:hover {
+    background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 204, 0, 0.4);
+}
+
+.btn-submit:active {
+    transform: translateY(0);
+}
+
+.btn-cancel {
+    width: 100%;
+    padding: 14px;
+    background: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-cancel:hover {
+    background: #000000;
+    color: #ffffff;
+}
+
+.mensaje {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.mensaje.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.mensaje.success {
+    background-color: #00cc00;
+    color: #ffffff;
+    border: 2px solid #00ff00;
+}
+
+.mensaje.error {
+    background-color: #ff3333;
+    color: #ffffff;
+    border: 2px solid #ff0000;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 25px;
+    }
+    
+    .header h1 {
+        font-size: 24px;
+    }
+    
+    .logo {
+        max-width: 100px;
+        max-height: 60px;
+    }
+}
