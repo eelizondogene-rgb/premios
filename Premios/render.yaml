@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: premios
+    env: python
+    buildCommand: |
+      apt-get update && apt-get install -y freetds-dev freetds-bin
+      pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    runtime: python3
+    plan: free
