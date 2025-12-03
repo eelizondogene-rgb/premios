@@ -1,95 +1,85 @@
 from flask import Flask, render_template, request, jsonify
-import pyodbc
+from sqlalchemy import create_engine, text
 
 app = Flask(__name__)
 
+# ---------------------------------------------------------
+# 🔌 Conexión a SQL Server (SQLAlchemy + pytds)
+# ---------------------------------------------------------
 def conectar_bd():
-    servidor = '200.91.92.132,9933'
-    nombre_bd = 'CODEAS'
-    nombre_usu = 'sa'
-    password = 'Spill$184'
     try:
-        conn = pyodbc.connect(
-            'DRIVER={FreeTDS};'
-            'SERVER=200.91.92.132;'
-            'PORT=9933;'
-            'DATABASE=CODEAS;'
-            'UID=sa;'
-            'PWD=Spill$184;'
-            'TDS_VERSION=7.4;'
+        engine = create_engine(
+            "mssql+pytds://sa:Spill$184@200.91.92.132:9933/CODEAS"
         )
-        return conn
+        return engine
     except Exception as e:
-        print(f"Error de conexión: {e}")
+        print(f"❌ Error al conectar a SQL Server: {e}")
         return None
+
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
+# ---------------------------------------------------------
+# 🔍 VALIDAR SI EL EMPLEADO ES SOCIO
+# ---------------------------------------------------------
 @app.route('/validar_socio', methods=['POST'])
 def validar_socio():
     try:
         codigo_empleado = request.form['codigo_empleado']
-        
-        conn = conectar_bd()
-        if conn is None:
+
+        engine = conectar_bd()
+        if engine is None:
             return jsonify({
-                'success': False, 
+                'success': False,
                 'message': 'Error al conectar con la base de datos'
             })
-        
-        cursor = conn.cursor()
-        
-        # Verificar si es socio en ASOCIADOS_LINEA
-        query_socio = """
+
+        query = text("""
             SELECT CondAsoc 
             FROM dbo.ASOCIADOS_LINEA 
-            WHERE CodAsoc = ?
-        """
-        cursor.execute(query_socio, (codigo_empleado,))
-        resultado_socio = cursor.fetchone()
-        
-        if not resultado_socio:
-            # No existe en la vista, puede registrar
-            cursor.close()
-            conn.close()
+            WHERE CodAsoc = :codigo
+        """)
+
+        with engine.connect() as conn:
+            result = conn.execute(query, {"codigo": codigo_empleado}).fetchone()
+
+        if not result:
             return jsonify({
                 'success': True,
                 'es_socio': True,
-                'message': 'Código de empleado válido. Por favor complete los datos'
+                'message': 'Código válido. Complete los datos.'
             })
-        
-        cond_asoc = resultado_socio[0].strip() if resultado_socio[0] else ''
-        
-        # Verificar si está activo
-        if cond_asoc.upper() == 'ACTIVO':
-            # Está activo, NO puede registrar
-            cursor.close()
-            conn.close()
+
+        cond_asoc = (result[0] or "").strip().upper()
+
+        if cond_asoc == "ACTIVO":
             return jsonify({
                 'success': False,
                 'es_socio': False,
                 'activo': True,
-                'message': 'El socio está ACTIVO y no puede registrarse en el sistema de premios'
+                'message': 'El socio está ACTIVO y no puede registrarse.'
             })
         else:
-            # Está inactivo, puede registrar
-            cursor.close()
-            conn.close()
             return jsonify({
                 'success': True,
                 'es_socio': True,
                 'activo': False,
-                'message': 'Código de empleado válido. Por favor complete los datos'
+                'message': 'Código válido. Complete los datos.'
             })
-        
+
     except Exception as e:
         return jsonify({
-            'success': False, 
+            'success': False,
             'message': f'Error al validar: {str(e)}'
         })
 
+
+# ---------------------------------------------------------
+# 💾 GUARDAR EMPLEADO
+# ---------------------------------------------------------
 @app.route('/guardar_empleado', methods=['POST'])
 def guardar_empleado():
     try:
@@ -97,61 +87,66 @@ def guardar_empleado():
         nombre_completo = request.form['nombre_completo'].strip()
         numero_cedula = request.form['numero_cedula'].strip()
         cuenta_iban = request.form['cuenta_iban'].strip().upper()
-        
-        # Validar IBAN (22 dígitos incluyendo CR)
+
+        # Validación IBAN
         if not cuenta_iban.startswith('CR') or len(cuenta_iban) != 22:
             return jsonify({
-                'success': False, 
-                'message': 'La cuenta IBAN debe tener 22 caracteres incluyendo CR'
+                'success': False,
+                'message': 'El IBAN debe iniciar con CR y tener 22 caracteres.'
             })
-        
-        conn = conectar_bd()
-        if conn is None:
-            return jsonify({
-                'success': False, 
-                'message': 'Error al conectar con la base de datos'
-            })
-        
-        cursor = conn.cursor()
-        
-        # Verificar nuevamente si ya está registrado
-        query_check = "SELECT COUNT(*) FROM dbo.PREMIOS_DATOS WHERE CodigoEmpleado = ?"
-        cursor.execute(query_check, (codigo_empleado,))
-        existe = cursor.fetchone()[0] > 0
-        
-        if existe:
-            cursor.close()
-            conn.close()
+
+        engine = conectar_bd()
+        if engine is None:
             return jsonify({
                 'success': False,
-                'message': 'Esta cuenta ya se encuentra registrada'
+                'message': 'Error al conectar con la base de datos'
             })
-        
-        # Insertar datos
-        query = """
+
+        # Verificar si ya existe
+        query_check = text("""
+            SELECT COUNT(*) 
+            FROM dbo.PREMIOS_DATOS 
+            WHERE CodigoEmpleado = :codigo
+        """)
+
+        insert_query = text("""
             INSERT INTO dbo.PREMIOS_DATOS (CodigoEmpleado, Nombre, CuentaBancaria, Cedula)
-            VALUES (?, ?, ?, ?)
-        """
-        cursor.execute(query, (codigo_empleado, nombre_completo, cuenta_iban, numero_cedula))
-        conn.commit()
-        
-        cursor.close()
-        conn.close()
-        
+            VALUES (:codigo, :nombre, :iban, :cedula)
+        """)
+
+        with engine.begin() as conn:
+            existe = conn.execute(query_check, {"codigo": codigo_empleado}).scalar()
+
+            if existe:
+                return jsonify({
+                    'success': False,
+                    'message': 'Este empleado ya está registrado.'
+                })
+
+            conn.execute(insert_query, {
+                "codigo": codigo_empleado,
+                "nombre": nombre_completo,
+                "iban": cuenta_iban,
+                "cedula": numero_cedula
+            })
+
         return jsonify({
-            'success': True, 
-            'message': 'Empleado registrado exitosamente'
+            'success': True,
+            'message': 'Empleado registrado exitosamente.'
         })
-        
-    except pyodbc.IntegrityError:
-        return jsonify({
-            'success': False, 
-            'message': 'El código de empleado ya existe en la base de datos'
-        })
+
     except Exception as e:
         return jsonify({
-            'success': False, 
+            'success': False,
             'message': f'Error al guardar: {str(e)}'
         })
+
+
+# ---------------------------------------------------------
+# 🚀 EJECUTAR LOCALMENTE
+# ---------------------------------------------------------
+if __name__ == "__main__":
+    app.run(debug=True)
+
 
 
