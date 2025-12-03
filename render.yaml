@@ -1,7 +1,8 @@
 services:
   - type: web
-    name: premios
-    env: python
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn premios:app"
-    plan: free
+    name: premios-flask
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn premios:app
+    envVars:
+      PYTHON_VERSION: 3.10
