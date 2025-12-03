@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: premios
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn premios:app"
+    plan: free

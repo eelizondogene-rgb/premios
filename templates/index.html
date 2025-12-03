@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Empleados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="logos">
+            <img src="{{ url_for('static', filename='ASECargill.png') }}" alt="ASECargill" class="logo">
+            <img src="{{ url_for('static', filename='Cargill.png') }}" alt="Cargill" class="logo">
+        </div>
+
+        <div class="header">
+            <h1>Sistema de Registro de Empleados</h1>
+            <div class="header-line"></div>
+        </div>
+
+        <!-- Paso 1: Validar código de empleado -->
+        <div id="paso1">
+            <form id="formValidacion">
+                <div class="form-group">
+                    <label for="codigo_empleado_validar">Código de Empleado *</label>
+                    <input type="text" id="codigo_empleado_validar" name="codigo_empleado" required>
+                </div>
+                <button type="submit" class="btn-submit">Validar Código</button>
+            </form>
+        </div>
+
+        <!-- Paso 2: Formulario completo (oculto inicialmente) -->
+        <div id="paso2" style="display: none;">
+            <form id="formEmpleado">
+                <input type="hidden" id="codigo_empleado_hidden" name="codigo_empleado">
+                
+                <div class="form-group">
+                    <label for="codigo_empleado_display">Código de Empleado</label>
+                    <input type="text" id="codigo_empleado_display" disabled>
+                </div>
+
+                <div class="form-group">
+                    <label for="nombre_completo">Nombre Completo *</label>
+                    <input type="text" id="nombre_completo" name="nombre_completo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="numero_cedula">Número de Cédula *</label>
+                    <input type="text" id="numero_cedula" name="numero_cedula" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="cuenta_iban">Cuenta IBAN (22 dígitos incluyendo CR) *</label>
+                    <input type="text" id="cuenta_iban" name="cuenta_iban" 
+                           placeholder="CR***1020000*********" 
+                           maxlength="22" 
+                           required>
+                    <small>Ejemplo: CR47010200009260272778</small>
+                </div>
+
+                <button type="submit" class="btn-submit">Registrar Empleado</button>
+                <button type="button" class="btn-cancel" onclick="cancelarRegistro()">Cancelar</button>
+            </form>
+        </div>
+
+        <div id="mensaje" class="mensaje"></div>
+    </div>
+
+    <script>
+        // Validar código de empleado
+        document.getElementById('formValidacion').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const mensajeDiv = document.getElementById('mensaje');
+            
+            fetch('/validar_socio', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.es_socio) {
+                    // Es socio válido, mostrar formulario completo
+                    mensajeDiv.className = 'mensaje success show';
+                    mensajeDiv.textContent = data.message;
+                    
+                    const codigo = formData.get('codigo_empleado');
+                    document.getElementById('codigo_empleado_hidden').value = codigo;
+                    document.getElementById('codigo_empleado_display').value = codigo;
+                    
+                    document.getElementById('paso1').style.display = 'none';
+                    document.getElementById('paso2').style.display = 'block';
+                    
+                    setTimeout(() => {
+                        mensajeDiv.classList.remove('show');
+                    }, 3000);
+                } else if (data.registrado) {
+                    // Ya está registrado
+                    mensajeDiv.className = 'mensaje error show';
+                    mensajeDiv.textContent = data.message;
+                } else {
+                    // No es socio
+                    mensajeDiv.className = 'mensaje error show';
+                    mensajeDiv.textContent = data.message;
+                }
+            })
+            .catch(error => {
+                mensajeDiv.className = 'mensaje error show';
+                mensajeDiv.textContent = 'Error al conectar con el servidor';
+            });
+        });
+
+        // Registrar empleado
+        document.getElementById('formEmpleado').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const mensajeDiv = document.getElementById('mensaje');
+            
+            // Validar IBAN
+            const iban = formData.get('cuenta_iban');
+            if (!iban.startsWith('CR') || iban.length !== 22) {
+                mensajeDiv.className = 'mensaje error show';
+                mensajeDiv.textContent = 'La cuenta IBAN debe iniciar con CR y tener 22 caracteres';
+                return;
+            }
+            
+            
+            fetch('/guardar_empleado', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mensajeDiv.className = 'mensaje success show';
+                    mensajeDiv.textContent = data.message;
+                    
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    mensajeDiv.className = 'mensaje error show';
+                    mensajeDiv.textContent = data.message;
+                }
+            })
+            .catch(error => {
+                mensajeDiv.className = 'mensaje error show';
+                mensajeDiv.textContent = 'Error al conectar con el servidor';
+            });
+        });
+
+        function cancelarRegistro() {
+            location.reload();
+        }
+
+        // Forzar mayúsculas en IBAN
+        document.getElementById('cuenta_iban').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+    </script>
+</body>
+</html>
